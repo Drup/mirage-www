@@ -114,6 +114,12 @@ module People = struct
     email     = Some "buzzheavyyear@hotmail.com";
   }
 
+  let drup = {
+    Atom.name = "Gabriel Radanne";
+    uri       = Some "https://github.com/drupyog";
+    email     = Some "drupyog@zoho.com";
+  }
+
 end
 
 let rights = Some "All rights reserved by the author"
@@ -125,6 +131,11 @@ module Blog = struct
     let open Cowabloga.Date in
     let open Cowabloga.Blog.Entry in
     [
+      { updated    = date (2015, 08, 15, 6, 12);
+        authors    = [drup];
+        subject    = "Functoria";
+        body       = "functoria.md";
+        permalink  = "functoria";
       { updated    = date (2015, 10, 15, 19, 0);
         authors    = [amir];
         subject    = "Getting Started Screencasts";
@@ -377,9 +388,6 @@ module Wiki = struct
     }
 
   let entries = [
-    weekly ~y:2015 ~m:9 ~d:30 ~a:amir;
-    weekly ~y:2015 ~m:9 ~d:9 ~a:amir;
-    weekly ~y:2015 ~m:8 ~d:26 ~a:mort;
     weekly ~y:2015 ~m:7 ~d:1 ~a:anil;
     weekly ~y:2015 ~m:6 ~d:3 ~a:amir;
     weekly ~y:2015 ~m:5 ~d:20 ~a:amir;
@@ -644,14 +652,6 @@ module Links = struct
   }
 
   let entries = [
-    { id = "talk-big-techday8";
-      uri = Uri.of_string
-              "http://www.techcast.com/events/bigtechday8/salvator-1130/";
-      title = "Nymote: Git your own cloud here";
-      date = day(2015,06,12);
-      stream = talk;
-    };
-
     { id="tls-podcast-ohm";
       uri=Uri.of_string "http://monoxyd.de/20150408-ohm-008-ohne-heftige-mangel";
       title="(german) OHM #008 – Ohne Heftige Mängel: TLS und dessen Probleme; robuste Implementierung von Sicherheitsprotokollen; OCaml-TLS und MirageOS";
