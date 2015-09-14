@@ -80,8 +80,18 @@ let pr_key =
   in
   Key.create ~doc ~default:false ~stage:`Configure "pr" Key.Desc.bool
 
-let host = get "HOST" ~default:None opt_string_of_env
-let redirect = get "REDIRECT" ~default:None opt_string_of_env
+
+let host_key =
+  let doc = Key.Doc.create ~doc:"Hostname of the unikernel." ["host"] in
+  Key.create ~doc ~default:"localhost" "host" Key.Desc.string
+
+let redirect_key =
+  let doc = Key.Doc.create ~doc:"Where to redirect to." ["redirect"] in
+  Key.create ~doc ~default:None "redirect" Key.Desc.(option string)
+
+let keys = Key.[ hide host_key ; hide redirect_key ]
+
+
 let image = get "XENIMG" ~default:"www" string_of_env
 
 let filesfs = generic_kv_ro ~group:"file" "../files"
@@ -96,23 +106,15 @@ let secrets =
 
 let stack = generic_stackv4 default_console tap0
 
-let sp = Printf.sprintf
-
-let config =
-  let h = match host with None -> "None" | Some s -> sp "Some %S" s in
-  let r = match redirect with None -> "None" | Some d -> sp "Some %S" d in
-  sp "struct let host = %s let redirect = %s end" h r
-
-let main = sp "Make(%s)" config
 
 let http =
-  foreign ("Dispatch." ^ main)
+  foreign ~keys "Dispatch.Make"
     (console @-> kv_ro @-> kv_ro @-> http @-> clock @-> job)
 
 let https =
   let libraries = [ "tls"; "tls.mirage"; "mirage-http" ] in
   let packages = ["tls"; "tls"; "mirage-http"] in
-  foreign ~libraries ~packages ("Dispatch_tls." ^ main)
+  foreign ~libraries ~packages  ~keys "Dispatch_tls.Make"
     ~dependencies:[hide nocrypto]
     (console @-> kv_ro @-> kv_ro @-> stackv4 @-> kv_ro @-> clock @-> job)
 
