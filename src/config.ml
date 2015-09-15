@@ -16,58 +16,6 @@
 
 open Mirage
 
-let split c s =
-  let rec aux c s ri acc =
-    (* half-closed intervals. [ri] is the open end, the right-fencepost.
-       [li] is the closed end, the left-fencepost. either [li] is
-       + negative (outside [s]), or
-       + equal to [ri] ([c] not found in remainder of [s]) ->
-         take everything from [ s[0], s[ri] )
-       + else inside [s], thus an instance of the separator ->
-         accumulate from the separator to [ri]: [ s[li+1], s[ri] )
-         and move [ri] inwards to the discovered separator [li]
-    *)
-    let li = try String.rindex_from s (ri-1) c with Not_found -> -1 in
-    if li < 0 || li == ri then (String.sub s 0 ri) :: acc
-    else begin
-      let len = ri-1 - li in
-      let rs = String.sub s (li+1) len in
-      aux c s li (rs :: acc)
-    end
-  in
-  aux c s (String.length s) []
-
-let ips_of_env x = split ':' x |> List.map Ipaddr.V4.of_string_exn
-let bool_of_env = function "1" | "true" | "yes" -> true | _ -> false
-let socket_of_env = function "socket" -> `Socket | _ -> `Direct
-let fat_of_env = function "fat" -> `Fat | "archive" -> `Archive | _ -> `Crunch
-let opt_string_of_env x = Some x
-let string_of_env x = x
-
-let err fmt =
-  Printf.ksprintf (fun str ->
-      Printf.eprintf ("\027[31m[ERROR]\027[m     %s\n") str;
-      exit 1
-    ) fmt
-
-let env_info fmt = Printf.printf ("\027[33mENV\027[m         " ^^ fmt ^^ "\n%!")
-
-let get_env name fn =
-  let res = Sys.getenv name in
-  env_info "%s => %s" name res;
-  fn (String.lowercase res)
-
-let get_exn name fn =
-  try get_env name fn
-  with Not_found ->
-    err "%s is not set." name
-
-let get ~default name fn =
-  try get_env name fn
-  with Not_found ->
-    env_info "%s => not set." name;
-    default
-
 let tls_key =
   let doc = Key.Doc.create
       ~doc:"Enable serving the website over https." ["tls"]
@@ -91,8 +39,6 @@ let redirect_key =
 
 let keys = Key.[ hidden host_key ; hidden redirect_key ]
 
-
-let image = get "XENIMG" ~default:"www" string_of_env
 
 let filesfs = generic_kv_ro ~group:"file" "../files"
 let tmplfs = generic_kv_ro ~group:"tmpl" "../tmpl"
@@ -132,6 +78,6 @@ let packages  = [ "cow"; "cowabloga"; "xapi-rrd"; "c3" ]
 let () =
   let tracing = None in
   (* let tracing = mprof_trace ~size:10000 () in *)
-  register ?tracing ~libraries ~packages image [
+  register ?tracing ~libraries ~packages "www" [
     dispatch $ default_console $ filesfs $ tmplfs $ default_clock
   ]
