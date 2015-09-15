@@ -89,7 +89,7 @@ let redirect_key =
   let doc = Key.Doc.create ~doc:"Where to redirect to." ["redirect"] in
   Key.create ~doc ~default:None "redirect" Key.Desc.(option string)
 
-let keys = Key.[ hide host_key ; hide redirect_key ]
+let keys = Key.[ hidden host_key ; hidden redirect_key ]
 
 
 let image = get "XENIMG" ~default:"www" string_of_env
@@ -115,7 +115,7 @@ let https =
   let libraries = [ "tls"; "tls.mirage"; "mirage-http" ] in
   let packages = ["tls"; "tls"; "mirage-http"] in
   foreign ~libraries ~packages  ~keys "Dispatch_tls.Make"
-    ~dependencies:[hide nocrypto]
+    ~dependencies:[hidden nocrypto]
     (stackv4 @-> kv_ro @-> console @-> kv_ro @-> kv_ro @-> clock @-> job)
 
 
