@@ -1,5 +1,46 @@
 This page records API changes that require existing code to be updated.
 
+### 2015-09, Functoria edition
+
+#### Command line
+
+The options `--unix` and `--xen` are not available anymore.
+They must be replaced respectively by `-t unix` and `-t xen`.
+This option was available before so this is retro-compatible.
+
+The config file must be passed with the `-f` option (instead of being just
+an argument).
+
+#### Deprecation: Misc functions
+
+`get_mode` is deprecated. You should use keys instead. And in particular `Key.target` and `Key.is_xen`.
+
+`add_to_ocamlfind_libraries` and `add_to_opam_packages` are deprecated. Both the `foreign` and the `register` functions now possess the `~libraries` and `~packages` arguments to specify libraries dependencies.
+
+#### Entropy
+
+If you were using `tls` without the conduit combinator, you will be
+greeted during configuration by a message like this:
+
+```
+The "tls" library is loaded but entropy is not enabled!
+Please enable the entropy by adding a dependency to the nocrypto device.
+You can do so with the ~dependencies argument of Mirage.foreign.
+```
+
+Data dependencies (such as entropy initialization) are now explicit.
+In order to fix this, you need to declare the dependency like so:
+```
+open Mirage
+
+let my_functor =
+  let dependencies = [hidden nocrypto] in
+  foreign ~dependencies "My_Functor" (foo @-> bar)
+```
+
+`My_functor.start` will now take an extra argument for each
+dependencies. In the case of nocrypto, this is `()`.
+
 ### 2015-06-18: HTTP servers with Mirage > 2.5
 
 Before, you would specify your server's address in the `config.ml`:
