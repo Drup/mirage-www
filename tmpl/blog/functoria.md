@@ -1,12 +1,8 @@
 
-Since two month, I have been at OCamllabs for « holidays » with the grand task
-of « fixing the mirage tool »[^1]
+For the last two month, I have been at OCamllabs for « holidays » with the grand task
+of « fixing the mirage tool » *cough*.
 
-[^1]: Ok, I asked for it ...
-
-Well, now, it's fixed.[^2] I'm happy to present [Functoria](https://github.com/Drup/Functoria), a library to create arbitrary mirage-like DSLs. Functoria is independent from Mirage and will replace all the core engine that was bolted on the mirage tool until now.
-
-[^2]: A bit.
+I'm happy to present [Functoria](https://github.com/Drup/Functoria), a library to create arbitrary mirage-like DSLs. Functoria is independent from Mirage and will replace all the core engine that was bolted on the mirage tool until now.
 
 The bad news is that it's going to break some (little) things, the good news is that it will be much more simple to use and much more flexible.
 And it produces pretty pictures.
@@ -15,6 +11,8 @@ Let's start by the unpleasant part: the things that breaks (and how to migrate).
 
 ## Breaking the law
 
+### Command line
+
 The options `--unix` and `--xen` are not available anymore.
 They must be replaced respectively by `-t unix` and `-t xen`.
 This option was available before so this is retro-compatible.
@@ -22,8 +20,15 @@ This option was available before so this is retro-compatible.
 The config file must be passed with the `-f` option (instead of being just
 an argument).
 
+### Misc functions
+
 The `get_mode` function is still available, but deprecated. You should use
-[Keys](#keys) instead. And in particular, `Key.target`.
+[Keys](#Keeperofthesevenkeys) instead. And in particular, `Key.target`.
+
+The functions `add_to_ocamlfind_libraries` and `add_to_opam_packages` are deprecated. Both the `foreign` and the `register` functions now possess the `~libraries` and `~packages` arguments to specify libraries dependencies.
+I encourage unikernel writers to be precise about their dependencies: Dependencies that are only for a foreign module and not for the whole module should be given to the `foreign` function.
+
+### Entropy
 
 If you were using `tls` before without the conduit combinator, you will be
 greeted during configuration by a message like this:
@@ -53,7 +58,7 @@ And that's all. We can now move on to the good parts!
 
 ## Keeper of the seven keys
 
-A [much][] [reclaimed][] [feature][] is the ability to define so called bootvar.
+A [much][] [reclaimed][] [feature][] is the ability to define so called bootvars.
 Bootvars are variables which value would be set either at configure time or at
 startup time.
 
@@ -77,7 +82,7 @@ All of this is now possible using **keys**. A key is composed of :
 Let's consider we are building a multilingual unikernel and we want to pass the
 default language as a parameter. We will use a simple string, so we can use the
 predefined description `Key.Desc.string`. We want to be able to define it both
-at configure and run time, so we use the stage ` `Both`. This gives us the following code:
+at configure and run time, so we use the stage `` `Both``. This gives us the following code:
 
 ```
 let lang_key =
@@ -87,10 +92,8 @@ let lang_key =
   Key.create ~doc ~stage:`Both ~default:"fr" "language" Key.Desc.string
 ```
 
-Here, We defined both a long option `--lang` and a short one `-l`.[^3]
+Here, We defined both a long option `--lang` and a short one `-l`. (this is the same format as the one used by [Cmdliner][cmdliner]).
 In the unikernel, the value is retrieved with `Bootvar_gen.language ()`.
-
-[^3]: This is the same format as the one used by [Cmdliner](http://erratique.ch/software/cmdliner).
 
 The option is also documented in the `--help` option for both `mirage config` (at configure time) and `./my_unikernel` (at startup time).
 
@@ -98,6 +101,8 @@ The option is also documented in the `--help` option for both `mirage config` (a
        -l VAL, --lang=VAL (absent=fr)
            The default language for the unikernel.
 ```
+
+[cmdliner]: http://erratique.ch/software/cmdliner
 
 ### Keys to the Kingdom
 
@@ -124,11 +129,19 @@ let dynamic_storage =
 
 We can now use this device as a normal storage device of type `kv_ro impl`!
 
-It is also possible to compute on keys before giving them to `if_impl`, combining multiple keys in order to compute a value, and so on. The documentation is located in the `Mirage.Key` module and various examples are available in `mirage` and `mirage-skeleton`.
+It is also possible to compute on keys before giving them to `if_impl`, combining multiple keys in order to compute a value, and so on. The documentation for the API is located in the `Mirage.Key` module and various examples are available in `mirage` and `mirage-skeleton`.
 
 Switching keys opens various possibilities, for example a `generic_stack` combinator is now implemented in mirage that will switch between socket stack, direct stack with dhcp and direct stack with static ip, depending on command line arguments.
 
 ## All your functors are belong to us
+
+All these keys and dynamic implementations makes for complicated unikernels. In order to still be able to understand what is going on and how to configure our unikernels, functoria adds a new command: `describe`.
+
+If we go to the directory `console` in [mirage-skeleton](github.com/mirage/mirage-skeleton.git) and type `mirage describe --dot`, we will get the following output.
+
+![A console unikernel](../graphics/dot/console.png "My little unikernel")
+
+As you can see, the actualy
 
 ## Data dependencies
 
