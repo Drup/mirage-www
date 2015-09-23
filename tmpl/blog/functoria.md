@@ -1,69 +1,22 @@
 
 For the last two month, I have been at OCamllabs for « holidays » with the grand task
-of « fixing the mirage tool » *cough*.
+of « fixing the mirage tool ».
 
 I'm happy to present [Functoria](https://github.com/Drup/Functoria), a library to create arbitrary mirage-like DSLs. Functoria is independent from Mirage and will replace all the core engine that was bolted on the mirage tool until now.
 
-The bad news is that it's going to break some (little) things, the good news is that it will be much more simple to use and much more flexible.
+The bad news is that it's going to break some (little) things. To see the breaking changes and how to fix them, consult [the breaking changes page](../docs/breaking-changes).
+
+The good news is that it will be much more simple to use and much more flexible.
 And it produces pretty pictures.
 
-Let's start by the unpleasant part: the things that breaks (and how to migrate).
+## Keys
 
-## Breaking the law
-
-### Command line
-
-The options `--unix` and `--xen` are not available anymore.
-They must be replaced respectively by `-t unix` and `-t xen`.
-This option was available before so this is retro-compatible.
-
-The config file must be passed with the `-f` option (instead of being just
-an argument).
-
-### Misc functions
-
-The `get_mode` function is still available, but deprecated. You should use
-[Keys](#Keeperofthesevenkeys) instead. And in particular, `Key.target`.
-
-The functions `add_to_ocamlfind_libraries` and `add_to_opam_packages` are deprecated. Both the `foreign` and the `register` functions now possess the `~libraries` and `~packages` arguments to specify libraries dependencies.
-I encourage unikernel writers to be precise about their dependencies: Dependencies that are only for a foreign module and not for the whole module should be given to the `foreign` function.
-
-### Entropy
-
-If you were using `tls` before without the conduit combinator, you will be
-greeted during configuration by a message like this:
-
-```
-The "tls" library is loaded but entropy is not enabled!
-Please enable the entropy by adding a dependency to the nocrypto device.
-You can do so with the ~dependency argument of Mirage.foreign.
-```
-
-Data dependencies (such as entropy initialization) are now explicit.
-In order to fix this, you need to declare the dependency like so:
-```
-open Mirage
-
-let my_functor =
-  let dependencies = [hide nocrypto] in
-  foreign ~dependencies "My_Functor" (foo @-> bar)
-```
-
-The `My_functor.start` function will also now takes an extra argument for each
-dependencies. In the case of nocrypto, this is `()`.
-
-We will see more about data-dependencies in the [related section](#dependencies).
-
-And that's all. We can now move on to the good parts!
-
-## Keeper of the seven keys
-
-A [much][] [reclaimed][] [feature][] is the ability to define so called bootvars.
+A [much][] [demanded][] [feature][] is the ability to define so-called bootvars.
 Bootvars are variables which value would be set either at configure time or at
 startup time.
 
 [much]: https://github.com/mirage/mirage/issues/229
-[reclaimed]: https://github.com/mirage/mirage/issues/228
+[demanded]: https://github.com/mirage/mirage/issues/228
 [feature]: https://github.com/mirage/mirage/issues/231
 
 
@@ -79,7 +32,7 @@ All of this is now possible using **keys**. A key is composed of :
 - _stage_ : Is the key available only at runtime, at configure time or both ?
 - _documentation_ : It is not optional so you should really write it.
 
-Let's consider we are building a multilingual unikernel and we want to pass the
+Imagine we are building a multilingual unikernel and we want to pass the
 default language as a parameter. We will use a simple string, so we can use the
 predefined description `Key.Desc.string`. We want to be able to define it both
 at configure and run time, so we use the stage `` `Both``. This gives us the following code:
@@ -89,25 +42,27 @@ let lang_key =
   let doc = Key.Doc.create
       ~doc:"The default language for the unikernel." [ "l" ; "lang" ]
   in
-  Key.create ~doc ~stage:`Both ~default:"fr" "language" Key.Desc.string
+  Key.create ~doc ~stage:`Both ~default:"en" "language" Key.Desc.string
 ```
 
-Here, We defined both a long option `--lang` and a short one `-l`. (this is the same format as the one used by [Cmdliner][cmdliner]).
+Here, We defined both a long option `--lang` and a short one `-l` (the format is similar to the one used by [Cmdliner][cmdliner]).
 In the unikernel, the value is retrieved with `Bootvar_gen.language ()`.
 
 The option is also documented in the `--help` option for both `mirage config` (at configure time) and `./my_unikernel` (at startup time).
 
 ```
-       -l VAL, --lang=VAL (absent=fr)
+       -l VAL, --lang=VAL (absent=en)
            The default language for the unikernel.
 ```
 
 [cmdliner]: http://erratique.ch/software/cmdliner
 
-### Keys to the Kingdom
+A simple example of a unikernel with a key is available in [mirage-skeleton][] in the `hello` directory.
 
-We can actually do much more with keys: we can use them to switch implementation
-at configure time. To illustrate, let us take the example of a dynamic storage: We want to choose between a block device and a crunch device with a command line option.
+### Switching implementation
+
+We can do much more with keys: we can use them to switch implementation at configure time.
+To illustrate, let us take the example of a dynamic storage: We want to choose between a block device and a crunch device with a command line option.
 In order to do that, we must first define a boolean key:
 
 ```
@@ -118,7 +73,7 @@ let fat_key =
   Key.create ~doc ~stage:`Configure ~default:false "fat" Key.Desc.bool
 ```
 
-We can now use the `if_impl` combinator to choose between two devices depending on the value of the key.
+We can use the `if_impl` combinator to choose between two devices depending on the value of the key.
 
 ```
 let dynamic_storage =
@@ -127,22 +82,72 @@ let dynamic_storage =
     (my_crunch_device)
 ```
 
-We can now use this device as a normal storage device of type `kv_ro impl`!
+We can now use this device as a normal storage device of type `kv_ro impl`! The key is also documented in `mirage configure --help`:
 
-It is also possible to compute on keys before giving them to `if_impl`, combining multiple keys in order to compute a value, and so on. The documentation for the API is located in the `Mirage.Key` module and various examples are available in `mirage` and `mirage-skeleton`.
+```
+       --fat=VAL (absent=false)
+           Use a fat device if true, crunch otherwise.
+```
+
+It is also possible to compute on keys before giving them to `if_impl`, combining multiple keys in order to compute a value, and so on. The documentation for the API is located in the `Mirage.Key` module and various examples are available in [mirage][] and [mirage-skeleton][].
 
 Switching keys opens various possibilities, for example a `generic_stack` combinator is now implemented in mirage that will switch between socket stack, direct stack with dhcp and direct stack with static ip, depending on command line arguments.
 
-## All your functors are belong to us
+## Drawing unikernels
 
-All these keys and dynamic implementations makes for complicated unikernels. In order to still be able to understand what is going on and how to configure our unikernels, functoria adds a new command: `describe`.
+All these keys and dynamic implementations make for complicated unikernels. In order to still be able to understand what is going on and how to configure our unikernels, we have a new command: `describe`.
 
-If we go to the directory `console` in [mirage-skeleton](github.com/mirage/mirage-skeleton.git) and type `mirage describe --dot`, we will get the following output.
+Let us consider the `console` example in [mirage-skeleton][]:
 
-![A console unikernel](../graphics/dot/console.png "My little unikernel")
+```
+open Mirage
 
-As you can see, the actualy
+let main = foreign "Unikernel.Main" (console @-> job)
+let () = register "console" [main $ default_console]
+```
+
+This is fairly straightforward, we define a `Unikernel.Main` functor using a console and we
+instantiate it with the default console. If we execute `mirage describe --dot` in this directory, we will get the following output.
+
+[![A console unikernel](../graphics/dot/console.svg "My little unikernel")](../graphics/dot/console.svg)
+
+As you can see, there is already quite a few things going on!
+Squares are the various devices.
+The `default_console` is actually two consoles: the one on unix and the one on xen. We use the `if_impl` construction - represented as a circle node - to choose dynamically between the two.
+
+The `bootvar` device handles the runtime key handling. It relies on an `argv` device, which is similar to `console`. Those devices are present in all unikernels.
+
+The `mirage` device is the device that brings all the jobs together (and on the hypervisor binds them).
 
 ## Data dependencies
 
+You may have noticed dashed lines in the previous drawing, in particular from `mirage` to `Unikernel.Main`. Those lines are data dependencies. For example, the `bootvar` device has a dependency on the `argv` device. It means that `argv` is configured and run first, returns some data - an array of string - then `bootvar` is configured and run.
+
+If your unikernel has a data dependency - such as, for example, initializing the entropy - you can use the `~dependencies` argument on `Mirage.foreign`. The `start` function of the unikernel will receive one extra argument for each dependency.
+
+TODO Add a *simple* example (tls is too complicated ...)
+
 ## Sharing
+
+Since we have a way to draw unikernels, we can now observe the sharing between various pieces. For example, the direct stack with static ip yields this diagram:
+
+[![A stack unikernel](../graphics/dot/stack.svg "My stack unikernel")](../graphics/dot/stack.svg)
+
+You can see that all the sub-parts of the stack have been properly shared. To be merged, two devices must have the same name, keys, dependencies and functor arguments.
+To force non-sharing of two devices, is is enough to give them different names.
+
+This sharing also works up to switching keys. The dynamic stack gives us this diagram:
+
+[![A dynamic stack unikernel](../graphics/dot/dynamic.svg "My dynamic unikernel")](../graphics/dot/dynamic.svg)
+
+There is actually three stacks in this example: the socket stack, the direct stack with dhcp and the direct stack with ip, all controlled by switching keys.
+
+## All your functors are belong to us
+
+There is more to be said about the new capabilities offered by functoria, in particular on how to define new devices. You can discover them by looking at the [mirage][] implementation.
+
+However, to wrap up this blog post, I offer you a visualization of the mirage website itself. [Enjoy](../graphics/dot/www.svg).
+
+
+[mirage]: https://github.com/mirage/mirage
+[mirage-skeleton]: https://github.com/mirage/mirage-skeleton
