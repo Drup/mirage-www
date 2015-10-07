@@ -116,7 +116,7 @@ module People = struct
 
   let drup = {
     Atom.name = "Gabriel Radanne";
-    uri       = Some "https://github.com/drupyog";
+    uri       = Some "https://github.com/drup";
     email     = Some "drupyog@zoho.com";
   }
 
