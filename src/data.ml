@@ -136,6 +136,8 @@ module Blog = struct
         subject    = "Introducing Functoria";
         body       = "introducing-functoria.md";
         permalink  = "introducing-functoria";
+      };
+
       { updated    = date (2015, 10, 15, 19, 0);
         authors    = [amir];
         subject    = "Getting Started Screencasts";
